@@ -93,20 +93,18 @@ export function MarketTable({
               <th>Name</th>
               <th>Price</th>
               {SORT_HEADERS.map((header) => (
-                <th
-                  key={header.key}
-                  aria-sort={
-                    sortState.key === header.key
-                      ? sortState.direction === 'asc'
-                        ? 'ascending'
-                        : 'descending'
-                      : 'none'
-                  }
-                >
+                <th key={header.key}>
                   <button
                     type="button"
                     className="sort-button"
                     onClick={() => onSortChange(header.key)}
+                    aria-label={
+                      sortState.key === header.key
+                        ? `${header.label}, sorted ${
+                            sortState.direction === 'asc' ? 'ascending' : 'descending'
+                          }`
+                        : `${header.label}, not sorted`
+                    }
                   >
                     {header.label}
                     {sortState.key === header.key

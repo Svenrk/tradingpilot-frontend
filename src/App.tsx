@@ -52,21 +52,36 @@ function App() {
       [market]: { ...current[market], loading: true },
     }))
 
-    const result = market === 'crypto' ? await fetchTopCrypto() : await fetchTopStocks()
+    try {
+      const result = market === 'crypto' ? await fetchTopCrypto() : await fetchTopStocks()
 
-    if (requestId !== latestRequestIds.current[market]) {
-      return
+      if (requestId !== latestRequestIds.current[market]) {
+        return
+      }
+
+      setMarketStates((current) => ({
+        ...current,
+        [market]: {
+          assets: result.assets,
+          loading: false,
+          error: result.error,
+          isMockData: result.isMockData,
+        },
+      }))
+    } catch (error) {
+      if (requestId !== latestRequestIds.current[market]) {
+        return
+      }
+
+      setMarketStates((current) => ({
+        ...current,
+        [market]: {
+          ...current[market],
+          loading: false,
+          error: error instanceof Error ? error.message : 'Unable to load market data',
+        },
+      }))
     }
-
-    setMarketStates((current) => ({
-      ...current,
-      [market]: {
-        assets: result.assets,
-        loading: false,
-        error: result.error,
-        isMockData: result.isMockData,
-      },
-    }))
   }, [])
 
   useEffect(() => {
