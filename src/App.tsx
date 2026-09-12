@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchTopCrypto, fetchTopStocks, type MarketAsset } from './api/market'
 import { MarketTable } from './components/MarketTable'
 import { REFRESH_INTERVAL_MS } from './constants'
@@ -26,11 +26,18 @@ function readMarketKindFromHash(hash: string): MarketKind {
 
 function useMarketState(kind: MarketKind) {
   const [state, setState] = useState<MarketState>(INITIAL_STATE)
+  const latestRequestId = useRef(0)
 
   const loadData = useCallback(async () => {
+    latestRequestId.current += 1
+    const requestId = latestRequestId.current
     setState((current) => ({ ...current, loading: true }))
 
     const result = kind === 'crypto' ? await fetchTopCrypto() : await fetchTopStocks()
+
+    if (requestId !== latestRequestId.current) {
+      return
+    }
 
     setState({
       assets: result.assets,

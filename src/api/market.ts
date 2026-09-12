@@ -134,6 +134,25 @@ function normalizeAsset(asset: MarketAsset): MarketAsset {
   }
 }
 
+function parseRequiredNumber(value: unknown): number {
+  const numericValue =
+    typeof value === 'number' || typeof value === 'string' ? Number(value) : Number.NaN
+
+  if (!Number.isFinite(numericValue)) {
+    throw new Error('Invalid numeric field in backend response')
+  }
+
+  return numericValue
+}
+
+function parseRequiredString(value: unknown): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error('Invalid string field in backend response')
+  }
+
+  return value
+}
+
 function seededValue(seed: number): number {
   const x = Math.sin(seed) * 10_000
   return x - Math.floor(x)
@@ -194,7 +213,21 @@ function parseMarketResponse(payload: unknown): MarketAsset[] {
     throw new Error('Invalid backend response shape')
   }
 
-  return rawAssets.map((asset) => normalizeAsset(asset as MarketAsset))
+  return rawAssets.map((asset) => {
+    if (typeof asset !== 'object' || asset === null) {
+      throw new Error('Invalid backend response shape')
+    }
+
+    return normalizeAsset({
+      symbol: parseRequiredString((asset as Record<string, unknown>).symbol),
+      name: parseRequiredString((asset as Record<string, unknown>).name),
+      price: parseRequiredNumber((asset as Record<string, unknown>).price),
+      volume24h: parseRequiredNumber((asset as Record<string, unknown>).volume24h),
+      change5m: parseRequiredNumber((asset as Record<string, unknown>).change5m),
+      change4h: parseRequiredNumber((asset as Record<string, unknown>).change4h),
+      change24h: parseRequiredNumber((asset as Record<string, unknown>).change24h),
+    })
+  })
 }
 
 async function fetchTop(path: string, kind: 'crypto' | 'stock'): Promise<MarketFetchResult> {

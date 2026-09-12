@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import type { MarketAsset } from './api/market'
 
-const { cryptoAssets, stockAssets } = vi.hoisted(() => ({
+const { cryptoAssets, stockAssets, fetchTopCryptoMock, fetchTopStocksMock } = vi.hoisted(() => ({
   cryptoAssets: [
     {
       symbol: 'BTC',
@@ -45,24 +45,28 @@ const { cryptoAssets, stockAssets } = vi.hoisted(() => ({
       change24h: 2,
     },
   ] as MarketAsset[],
+  fetchTopCryptoMock: vi.fn(),
+  fetchTopStocksMock: vi.fn(),
 }))
 
 vi.mock('./api/market', () => ({
-  fetchTopCrypto: vi.fn().mockResolvedValue({
-    assets: cryptoAssets,
-    isMockData: false,
-    error: null,
-  }),
-  fetchTopStocks: vi.fn().mockResolvedValue({
-    assets: stockAssets,
-    isMockData: false,
-    error: null,
-  }),
+  fetchTopCrypto: fetchTopCryptoMock,
+  fetchTopStocks: fetchTopStocksMock,
 }))
 
 describe('App', () => {
   beforeEach(() => {
     window.location.hash = '#crypto'
+    fetchTopCryptoMock.mockResolvedValue({
+      assets: cryptoAssets,
+      isMockData: false,
+      error: null,
+    })
+    fetchTopStocksMock.mockResolvedValue({
+      assets: stockAssets,
+      isMockData: false,
+      error: null,
+    })
   })
 
   it('switches tabs and keeps active tab in URL hash', async () => {
@@ -99,5 +103,40 @@ describe('App', () => {
 
     const rowsAsc = screen.getAllByRole('row').slice(1)
     expect(within(rowsAsc[0]).getByText('ETH')).toBeInTheDocument()
+  })
+
+  it('renders loading state while data is being fetched', async () => {
+    let resolveCrypto: (() => void) | undefined
+    fetchTopCryptoMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCrypto = () =>
+            resolve({
+              assets: cryptoAssets,
+              isMockData: false,
+              error: null,
+            })
+        })
+    )
+
+    render(<App />)
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading data…')
+    resolveCrypto?.()
+    await screen.findByText('BTC')
+  })
+
+  it('renders fallback error banner when API data fails and mock data is used', async () => {
+    fetchTopCryptoMock.mockResolvedValue({
+      assets: cryptoAssets,
+      isMockData: true,
+      error: 'Request failed: 500',
+    })
+
+    render(<App />)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Showing mock data')
+    expect(screen.getByText('mock data')).toBeInTheDocument()
   })
 })
