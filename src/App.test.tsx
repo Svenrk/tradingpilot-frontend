@@ -94,15 +94,34 @@ describe('App', () => {
     const rowsBefore = screen.getAllByRole('row').slice(1)
     expect(within(rowsBefore[0]).getByText('BTC')).toBeInTheDocument()
 
+    await user.click(screen.getByRole('button', { name: 'Volume (24h)' }))
+    const rowsVolumeDesc = screen.getAllByRole('row').slice(1)
+    expect(within(rowsVolumeDesc[0]).getByText('BTC')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Volume (24h) ▼' }))
+    const rowsVolumeAsc = screen.getAllByRole('row').slice(1)
+    expect(within(rowsVolumeAsc[0]).getByText('ETH')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '24h % change' }))
+    const rowsTwentyFourDesc = screen.getAllByRole('row').slice(1)
+    expect(within(rowsTwentyFourDesc[0]).getByText('BTC')).toBeInTheDocument()
+
     await user.click(screen.getByRole('button', { name: '5m % change' }))
-
-    const rowsAfter = screen.getAllByRole('row').slice(1)
-    expect(within(rowsAfter[0]).getByText('BTC')).toBeInTheDocument()
-
     await user.click(screen.getByRole('button', { name: '5m % change ▼' }))
 
     const rowsAsc = screen.getAllByRole('row').slice(1)
     expect(within(rowsAsc[0]).getByText('ETH')).toBeInTheDocument()
+  })
+
+  it('defaults to descending 24h % order on first render', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('BTC')).toBeInTheDocument()
+    })
+
+    const rowsBefore = screen.getAllByRole('row').slice(1)
+    expect(within(rowsBefore[0]).getByText('BTC')).toBeInTheDocument()
   })
 
   it('renders loading state while data is being fetched', async () => {

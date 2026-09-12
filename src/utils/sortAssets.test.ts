@@ -56,4 +56,12 @@ describe('sortAssets', () => {
     expect(descending.map((asset) => asset.symbol)).toEqual(['AAA', 'CCC', 'BBB'])
     expect(ascending.map((asset) => asset.symbol)).toEqual(['BBB', 'CCC', 'AAA'])
   })
+
+  it('sorts volume24h descending and ascending', () => {
+    const descending = sortAssets(BASE_ASSETS, { key: 'volume24h', direction: 'desc' })
+    const ascending = sortAssets(BASE_ASSETS, { key: 'volume24h', direction: 'asc' })
+
+    expect(descending.map((asset) => asset.symbol)).toEqual(['AAA', 'BBB', 'CCC'])
+    expect(ascending.map((asset) => asset.symbol)).toEqual(['CCC', 'BBB', 'AAA'])
+  })
 })

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchTopCrypto, fetchTopStocks, type MarketAsset } from './api/market'
 import { MarketTable } from './components/MarketTable'
 import { REFRESH_INTERVAL_MS } from './constants'
@@ -15,7 +15,7 @@ interface MarketState {
 
 const INITIAL_STATE: MarketState = {
   assets: [],
-  loading: true,
+  loading: false,
   error: null,
   isMockData: false,
 }
@@ -24,46 +24,18 @@ function readMarketKindFromHash(hash: string): MarketKind {
   return hash === '#stocks' ? 'stocks' : 'crypto'
 }
 
-function useMarketState(kind: MarketKind) {
-  const [state, setState] = useState<MarketState>(INITIAL_STATE)
-  const latestRequestId = useRef(0)
-
-  const loadData = useCallback(async () => {
-    latestRequestId.current += 1
-    const requestId = latestRequestId.current
-    setState((current) => ({ ...current, loading: true }))
-
-    const result = kind === 'crypto' ? await fetchTopCrypto() : await fetchTopStocks()
-
-    if (requestId !== latestRequestId.current) {
-      return
-    }
-
-    setState({
-      assets: result.assets,
-      loading: false,
-      error: result.error,
-      isMockData: result.isMockData,
-    })
-  }, [kind])
-
-  useEffect(() => {
-    void loadData()
-    const interval = window.setInterval(loadData, REFRESH_INTERVAL_MS)
-
-    return () => window.clearInterval(interval)
-  }, [loadData])
-
-  return {
-    ...state,
-    refresh: loadData,
-  }
-}
-
 function App() {
   const [activeMarket, setActiveMarket] = useState<MarketKind>(() =>
     readMarketKindFromHash(window.location.hash)
   )
+  const [marketStates, setMarketStates] = useState<Record<MarketKind, MarketState>>({
+    crypto: INITIAL_STATE,
+    stocks: INITIAL_STATE,
+  })
+  const latestRequestIds = useRef<Record<MarketKind, number>>({
+    crypto: 0,
+    stocks: 0,
+  })
 
   useEffect(() => {
     const syncWithHash = () => setActiveMarket(readMarketKindFromHash(window.location.hash))
@@ -72,13 +44,39 @@ function App() {
     return () => window.removeEventListener('hashchange', syncWithHash)
   }, [])
 
-  const cryptoState = useMarketState('crypto')
-  const stocksState = useMarketState('stocks')
+  const loadMarketData = useCallback(async (market: MarketKind) => {
+    latestRequestIds.current[market] += 1
+    const requestId = latestRequestIds.current[market]
+    setMarketStates((current) => ({
+      ...current,
+      [market]: { ...current[market], loading: true },
+    }))
 
-  const currentState = useMemo(
-    () => (activeMarket === 'crypto' ? cryptoState : stocksState),
-    [activeMarket, cryptoState, stocksState]
-  )
+    const result = market === 'crypto' ? await fetchTopCrypto() : await fetchTopStocks()
+
+    if (requestId !== latestRequestIds.current[market]) {
+      return
+    }
+
+    setMarketStates((current) => ({
+      ...current,
+      [market]: {
+        assets: result.assets,
+        loading: false,
+        error: result.error,
+        isMockData: result.isMockData,
+      },
+    }))
+  }, [])
+
+  useEffect(() => {
+    void loadMarketData(activeMarket)
+    const interval = window.setInterval(() => void loadMarketData(activeMarket), REFRESH_INTERVAL_MS)
+
+    return () => window.clearInterval(interval)
+  }, [activeMarket, loadMarketData])
+
+  const currentState = marketStates[activeMarket]
 
   const selectMarket = (market: MarketKind) => {
     window.location.hash = market
@@ -115,7 +113,7 @@ function App() {
         loading={currentState.loading}
         error={currentState.error}
         isMockData={currentState.isMockData}
-        onRefresh={currentState.refresh}
+        onRefresh={() => void loadMarketData(activeMarket)}
       />
     </main>
   )
