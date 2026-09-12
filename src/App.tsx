@@ -95,7 +95,6 @@ function App() {
 
   const selectMarket = (market: MarketKind) => {
     window.location.hash = market
-    setActiveMarket(market)
   }
 
   return (
