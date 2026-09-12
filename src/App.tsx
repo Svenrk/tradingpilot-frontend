@@ -102,6 +102,7 @@ function App() {
       <header className="cockpit-header">
         <h1>TradingPilot Dashboard</h1>
         <p>Flight deck view of top 50 assets by 24-hour volume</p>
+        <div className="artificial-horizon" aria-hidden="true" />
       </header>
 
       <nav className="tabs" aria-label="Market tabs">
